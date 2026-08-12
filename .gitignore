@@ -1,0 +1,16 @@
+# Local verification harness. Kept out of the repository: its fixtures name
+# real samples and experiment folders.
+devtools/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

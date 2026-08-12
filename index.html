@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSV Workbench</title>
+<!-- Suppresses the favicon request; the page ships without one. -->
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="drag-overlay" hidden><span>Drop CSV files</span></div>
+
+<header class="topbar">
+  <h1>CSV Workbench</h1>
+  <p class="subtitle">Drop a CSV, choose the X and Y columns, then solve values by linear fit or linear interpolation.</p>
+</header>
+
+<main class="layout">
+
+  <section class="chart-pane">
+    <!-- The input stays outside the dropzone: fileInput.click() bubbles, and a
+         nested input would re-trigger the dropzone's own click handler. -->
+    <input type="file" id="file-input" accept=".csv" multiple hidden>
+    <div id="dropzone" class="dropzone">
+      <strong>Drop CSV files here</strong>
+      <span>or click to browse (multiple allowed)</span>
+    </div>
+    <svg id="chart" viewBox="0 0 900 560" role="img" aria-label="Scatter plot"></svg>
+    <p class="hint">Click a point on the chart to exclude it from the analysis, or to restore it.</p>
+  </section>
+
+  <aside class="sidebar">
+
+    <details class="panel" id="panel-axes">
+      <summary class="panel-summary">
+        <h2>Axes</h2>
+        <span class="summary-meta" id="axes-summary">Not set</span>
+      </summary>
+      <div class="panel-body">
+        <div class="field">
+          <label for="x-column">X axis</label>
+          <div class="field-row">
+            <select id="x-column" disabled></select>
+            <label class="check"><input type="checkbox" id="x-log"> log10</label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="y-column">Y axis</label>
+          <div class="field-row">
+            <select id="y-column" disabled></select>
+            <label class="check"><input type="checkbox" id="y-log"> log10</label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="group-column">Group by (splits each file into series)</label>
+          <div class="field-row">
+            <select id="group-column" disabled></select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="group-column-2">Then by (optional second grouping level)</label>
+          <div class="field-row">
+            <select id="group-column-2" disabled></select>
+          </div>
+        </div>
+        <button type="button" id="swap-axes" class="ghost-btn" disabled>Swap X and Y</button>
+      </div>
+    </details>
+
+    <details class="panel" id="panel-files" open>
+      <summary class="panel-summary">
+        <h2>Files and series</h2>
+        <span class="summary-meta" id="files-summary">No files</span>
+      </summary>
+      <div class="panel-body">
+        <div class="panel-actions">
+          <button type="button" id="show-all" class="ghost-btn">Show all</button>
+          <button type="button" id="clear-all" class="ghost-btn">Remove all</button>
+          <button type="button" id="export-csv" class="ghost-btn" disabled>Export visible → CSV</button>
+        </div>
+        <div id="file-list" class="file-list">
+          <p class="placeholder">No files loaded yet.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="panel" id="panel-analysis" open>
+      <summary class="panel-summary">
+        <h2>Analysis</h2>
+        <span class="summary-meta" id="analysis-summary">None</span>
+      </summary>
+      <div class="panel-body">
+
+        <div class="radio-row" role="radiogroup" aria-label="Analysis mode">
+          <label class="check"><input type="radio" name="mode" value="none" checked> None</label>
+          <label class="check"><input type="radio" name="mode" value="fit"> Linear fit</label>
+          <label class="check"><input type="radio" name="mode" value="interp"> Linear interpolation</label>
+        </div>
+
+        <div id="calc-block" hidden>
+          <div class="seg" role="group" aria-label="Solve direction">
+            <button type="button" class="seg-btn is-on" data-dir="xToY">X → Y</button>
+            <button type="button" class="seg-btn" data-dir="yToX">Y → X</button>
+          </div>
+          <form id="calc-form" class="calc-form">
+            <label for="q-input" id="calc-label">X value</label>
+            <div class="calc-row">
+              <input type="number" id="q-input" step="any" autocomplete="off">
+              <button type="submit" class="primary-btn">Solve</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel-actions" id="analysis-export-row" hidden>
+          <button type="button" id="export-analysis" class="ghost-btn">
+            Export analysis → CSV
+          </button>
+        </div>
+
+        <div id="result-cards" class="fit-cards">
+          <p class="placeholder">Choose an analysis mode to see results.</p>
+        </div>
+      </div>
+    </details>
+
+  </aside>
+</main>
+
+<dialog id="export-dialog" class="dialog">
+  <form method="dialog" class="dialog-body">
+    <h2>Export visible series</h2>
+
+    <fieldset class="dialog-section">
+      <legend>Layout</legend>
+      <label class="check">
+        <input type="radio" name="export-layout" value="vertical" checked>
+        Vertical — every series stacked into one table
+      </label>
+      <label class="check">
+        <input type="radio" name="export-layout" value="horizontal">
+        Horizontal — each series as its own block of columns, side by side
+      </label>
+    </fieldset>
+
+    <fieldset class="dialog-section">
+      <legend>
+        Columns
+        <span class="dialog-actions-inline">
+          <button type="button" id="export-all-cols" class="link-btn">All</button>
+          <button type="button" id="export-no-cols" class="link-btn">None</button>
+        </span>
+      </legend>
+      <div id="export-columns" class="column-list"></div>
+      <p class="dialog-note" id="export-note"></p>
+    </fieldset>
+
+    <div class="dialog-buttons">
+      <button type="button" id="export-cancel" class="ghost-btn">Cancel</button>
+      <button type="button" id="export-confirm" class="primary-btn">Export CSV</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="csv.js"></script>
+<script src="fit.js"></script>
+<script src="series.js"></script>
+<script src="chart.js"></script>
+<script src="export.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

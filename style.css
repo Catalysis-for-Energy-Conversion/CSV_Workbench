@@ -1,0 +1,563 @@
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.10);
+  --accent: #2a78d6;
+  --danger: #d03b3b;
+  --danger-bg: rgba(208, 59, 59, 0.09);
+  --hover: rgba(11, 11, 11, 0.04);
+
+  /* Series hues are generated per file by dividing the colour wheel, so only
+     the lightness and chroma are fixed here — one pair per theme. */
+  --series-l: 55%;
+  --series-c: 0.16;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --accent: #3987e5;
+    --danger: #e66767;
+    --danger-bg: rgba(230, 103, 103, 0.14);
+    --hover: rgba(255, 255, 255, 0.06);
+
+    --series-l: 75%;
+    --series-c: 0.15;
+  }
+}
+
+* { box-sizing: border-box; }
+
+/* Any author `display` rule outranks the UA stylesheet's [hidden] rule, so
+   `display: flex` on a class would otherwise keep a hidden element on screen. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+h1, h2 { margin: 0; font-weight: 600; }
+
+.topbar {
+  padding: 16px 24px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.topbar h1 { font-size: 18px; }
+.subtitle { margin: 2px 0 0; color: var(--text-secondary); font-size: 13px; }
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 20px;
+  padding: 20px 24px 40px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------- chart ---------- */
+
+.chart-pane {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  min-width: 0;
+}
+
+#chart { width: 100%; height: auto; display: block; }
+
+.hint { margin: 4px 0 0; color: var(--text-muted); font-size: 12px; }
+
+/* Decoration must never absorb clicks: points sitting on the frame or a
+   gridline still have to be selectable. */
+.grid-major,
+.grid-minor,
+.plot-frame,
+.tick-label,
+.axis-title,
+.chart-empty {
+  pointer-events: none;
+}
+
+.grid-major { stroke: var(--grid); stroke-width: 1; }
+.grid-minor { stroke: var(--grid); stroke-width: 1; opacity: 0.5; }
+.plot-frame { fill: none; stroke: var(--axis); stroke-width: 1; }
+.tick-label {
+  fill: var(--text-muted);
+  font-size: 12px;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.axis-title {
+  fill: var(--text-secondary);
+  font-size: 14px;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.chart-empty {
+  fill: var(--text-muted);
+  font-size: 15px;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.point-hit { cursor: pointer; }
+.query-guide {
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+.solution-marker { pointer-events: none; }
+
+/* ---------- dropzone ---------- */
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 28px 16px;
+  margin-bottom: 12px;
+  border: 2px dashed var(--axis);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: center;
+}
+.dropzone:hover { background: var(--hover); }
+.dropzone span { font-size: 12px; color: var(--text-muted); }
+.dropzone.compact {
+  flex-direction: row;
+  justify-content: center;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+.dropzone.compact span { display: none; }
+
+#drag-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--page) 82%, transparent);
+  border: 3px dashed var(--accent);
+  font-size: 20px;
+  font-weight: 600;
+  pointer-events: none;
+}
+#drag-overlay[hidden] { display: none; }
+
+/* ---------- panels ---------- */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.panel-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  cursor: pointer;
+  list-style: none;
+  border-radius: 10px;
+  user-select: none;
+}
+.panel-summary::-webkit-details-marker { display: none; }
+.panel-summary:hover { background: var(--hover); }
+.panel-summary h2 { font-size: 14px; flex: 1; min-width: 0; }
+/* Disclosure triangle, rotated by the open state of the parent <details>. */
+.panel-summary::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  border-left: 5px solid var(--text-muted);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.12s ease;
+}
+.panel[open] > .panel-summary::before { transform: rotate(90deg); }
+
+.summary-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 55%;
+}
+
+.panel-body { padding: 2px 14px 14px; }
+
+.panel-actions { display: flex; gap: 8px; margin-bottom: 8px; }
+
+.placeholder { color: var(--text-muted); font-size: 13px; margin: 4px 0; }
+
+/* ---------- form controls ---------- */
+
+.field { margin-bottom: 10px; }
+.field > label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 3px;
+}
+.field-row { display: flex; align-items: center; gap: 8px; }
+
+select {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--axis);
+  background: var(--page);
+  color: var(--text-primary);
+}
+select:disabled { color: var(--text-muted); cursor: not-allowed; }
+select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.check input { margin: 0; accent-color: var(--accent); cursor: pointer; }
+
+.radio-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; }
+
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.seg-btn {
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.seg-btn + .seg-btn { border-left: 1px solid var(--border); }
+.seg-btn:hover { background: var(--hover); }
+.seg-btn.is-on {
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.ghost-btn, .primary-btn, .icon-btn, .link-btn {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 4px 10px;
+}
+.ghost-btn:hover, .icon-btn:hover, .link-btn:hover { background: var(--hover); }
+.primary-btn {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+  padding: 6px 14px;
+  font-weight: 600;
+}
+.icon-btn {
+  padding: 2px 7px;
+  line-height: 1.2;
+  color: var(--text-muted);
+}
+.link-btn {
+  border: none;
+  padding: 2px 4px;
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: underline;
+}
+.link-btn:disabled {
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: default;
+  background: transparent;
+}
+
+/* ---------- file list / legend ---------- */
+
+.file-list { max-height: 340px; overflow-y: auto; }
+
+.file-group { border-top: 1px solid var(--border); padding: 8px 0; }
+.file-group:first-child { border-top: none; }
+
+.file-head { display: flex; align-items: center; gap: 8px; }
+.file-label {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 3px 6px;
+}
+.file-label:hover { border-color: var(--border); }
+.file-label:focus { border-color: var(--accent); outline: none; background: var(--page); }
+
+/* An inline SVG marker, so the heading shows the file's actual plot shape. */
+.swatch {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  overflow: visible;
+}
+
+.file-note { margin: 2px 0 0 4px; font-size: 12px; color: var(--text-muted); }
+.file-error {
+  margin: 2px 0 0;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-radius: 6px;
+}
+
+/* Files with hundreds of groups (long CA runs) collapse by default. */
+.series-details { margin-top: 2px; }
+.series-summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 3px 6px;
+  border-radius: 5px;
+  user-select: none;
+}
+.series-summary::-webkit-details-marker { display: none; }
+.series-summary:hover { background: var(--hover); }
+.series-summary::before { content: "▸ "; }
+.series-details[open] > .series-summary::before { content: "▾ "; }
+
+.series-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0 0 0 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.series-row { display: flex; align-items: center; gap: 2px; }
+.series-row .series-btn { flex: 1; min-width: 0; }
+.series-reset {
+  flex: 0 0 auto;
+  font-size: 13px;
+  line-height: 1;
+  padding: 3px 6px;
+}
+
+.series-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 6px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+.series-btn:hover { background: var(--hover); }
+.series-btn[aria-pressed="false"] { opacity: 0.4; text-decoration: line-through; }
+
+.series-key {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 14px;
+  overflow: visible;
+}
+.series-name { flex: 1; min-width: 0; }
+.series-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---------- calculate + fit cards ---------- */
+
+.calc-form label { display: block; font-size: 12px; color: var(--text-secondary); }
+.calc-row { display: flex; gap: 8px; margin: 4px 0 12px; }
+.calc-row input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--axis);
+  background: var(--page);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.calc-row input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+.fit-card {
+  border-top: 1px solid var(--border);
+  padding: 10px 0;
+}
+.fit-card:first-child { border-top: none; }
+.fit-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.fit-card-title { font-weight: 600; flex: 1; min-width: 0; }
+
+.fit-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.fit-row strong { color: var(--text-primary); font-weight: 600; }
+
+.equation {
+  display: block;
+  width: 100%;
+  margin: 4px 0;
+  padding: 5px 8px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+  text-align: left;
+  color: var(--text-primary);
+  background: var(--page);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.equation:hover { background: var(--hover); }
+
+.result { margin-top: 6px; font-size: 15px; font-variant-numeric: tabular-nums; }
+.result strong { font-weight: 600; }
+
+.badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+.fit-unavailable { color: var(--danger); font-size: 13px; }
+.fit-actions { margin-top: 4px; }
+
+/* ---------- export dialog ---------- */
+
+.dialog {
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-primary);
+  max-width: min(560px, 92vw);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+}
+.dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+
+.dialog-body { padding: 18px 20px 16px; }
+.dialog-body h2 { font-size: 16px; margin-bottom: 12px; }
+
+.dialog-section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px 12px;
+  margin: 0 0 12px;
+}
+.dialog-section legend {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.dialog-section .check { display: flex; margin-top: 4px; }
+
+.dialog-actions-inline { display: inline-flex; gap: 2px; }
+
+.column-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 2px 12px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.column-list .check {
+  min-width: 0;
+  padding: 2px 0;
+}
+.column-list .check span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dialog-note { margin: 8px 0 0; font-size: 12px; color: var(--text-muted); }
+
+.dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.result-list { margin: 6px 0 0; padding: 0; list-style: none; }
+.result-list li {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+.result-note { margin: 2px 0 0; font-size: 12px; color: var(--text-muted); }
+
+.ghost-btn:disabled,
+.primary-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ghost-btn:disabled:hover { background: transparent; }
+
+.fit-cards { max-height: 420px; overflow-y: auto; }
