@@ -163,6 +163,43 @@
     return axisConfig.log ? 'log10(' + axisConfig.column + ')' : axisConfig.column;
   }
 
+  // The async clipboard API is only handed out in a secure context, and not
+  // every browser counts file:// as one — Safari does not. Falling back to the
+  // old selection-based copy keeps the button working when opened from disk.
+  function legacyCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '0';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try {
+      ok = document.execCommand('copy');
+    } catch (e) {
+      ok = false;
+    }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).then(
+        function () {
+          return true;
+        },
+        function () {
+          // Rejected for want of focus or permission; the old path may still work.
+          return legacyCopy(text);
+        }
+      );
+    }
+    return Promise.resolve(legacyCopy(text));
+  }
+
   /* ---------------- analysis ---------------- */
 
   function computeAnalysis() {
@@ -602,8 +639,8 @@
       eq.title = 'Click to copy (x and y follow the axis settings above)';
       eq.addEventListener('click', function () {
         var text = eq.textContent;
-        navigator.clipboard.writeText(text).then(function () {
-          eq.textContent = 'Copied';
+        copyText(text).then(function (ok) {
+          eq.textContent = ok ? 'Copied' : 'Copy failed';
           setTimeout(function () {
             eq.textContent = text;
           }, 900);

@@ -19,7 +19,9 @@ install, no build step, no network.
 
 ## Getting started
 
-Open `index.html` in a modern browser. Chrome and Edge are the tested ones.
+Open `index.html` in a modern browser. Chrome and Edge are the tested ones;
+Firefox 113+ and Safari 16.2+ have everything it relies on. Any OS — it is
+just a page.
 
 Drop CSV files anywhere on the page, choose which columns to use for X and Y,
 and the plot appears.
