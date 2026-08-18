@@ -355,10 +355,10 @@ window.CsvWorkbench = window.CsvWorkbench || {};
       })
     );
 
+    // Points stay in source-row order: that order is data (a sweep, a time
+    // series) and the export reproduces it. Anything needing them ordered along
+    // X — the drawn polyline, the interpolation — sorts its own copy.
     descriptors.forEach(function (d, variantIndex) {
-      d.points.sort(function (a, b) {
-        return a.x - b.x;
-      });
       var series = {
         id: entry.id + '::g' + variantIndex,
         fileId: entry.id,

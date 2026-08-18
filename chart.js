@@ -406,7 +406,12 @@ window.CsvWorkbench = window.CsvWorkbench || {};
       var interp = view.mode === 'interp';
 
       if (s.points.length >= 2) {
-        var d = s.points
+        // Along X, matching the interpolation model this same line represents
+        // in interp mode. The stored points keep their source order.
+        var path = s.points.slice().sort(function (a, b) {
+          return a.x - b.x;
+        });
+        var d = path
           .map(function (p, i) {
             return (i === 0 ? 'M' : 'L') + xOf(p.x) + ' ' + yOf(p.y);
           })

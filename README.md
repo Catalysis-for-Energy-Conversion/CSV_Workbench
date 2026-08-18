@@ -47,8 +47,10 @@ Two separate exports, each written as a plain CSV.
 - *Columns* — tick exactly what you want. Both the raw and the log10 form of
   each axis are always available, whichever way the axis happens to be drawn.
 
-Hidden series produce no rows at all. Excluded points keep their row, with the
-X and Y reported as `NaN`, so the row count still matches the source.
+Rows come out in the order they appear in the source file — a sweep or a time
+series reads back the way it was recorded, whichever way the plot happens to
+run. Hidden series produce no rows at all. Excluded points keep their row, with
+the X and Y reported as `NaN`, so the row count still matches the source.
 
 **Analysis** writes one row per visible series: the fit's slope and intercept
 (with their units spelled out in the heading), R², how many points were used,
